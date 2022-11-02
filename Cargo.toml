@@ -1,0 +1,32 @@
+[package]
+name = "optimal_light_transport_tracer"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "light_transporter"
+path = "src/main.rs"
+
+[lib]
+name = "light_transporter"
+path = "src/lib.rs"
+
+[profile.dev]
+opt-level = 3
+incremental = true
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+incremental = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+minifb = "0.23.0"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+rayon = "1.5.3"
+confy = "0.4.0"
+serde = { version = "1.0.142", features = ["derive"] }
+ultraviolet = { version = "0.9", features = [ "f64", "int" ] }
