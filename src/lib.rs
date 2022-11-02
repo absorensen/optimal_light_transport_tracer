@@ -2,6 +2,7 @@ use std::{mem::size_of, f64::consts::PI};
 
 use minifb::{ScaleMode, Window, WindowOptions, Key};
 use rand::Rng;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use ultraviolet::DVec3;
 
 #[derive(Debug, Clone)]
@@ -68,11 +69,12 @@ static SPHERES: &'static [Sphere] =
         Sphere{radius: 1e5,   position: DVec3::new( 50.0,-1e5+81.6,81.6 ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.75,0.75,0.75   ), reflection: ReflectionType::DIFFUSE},//Top
         Sphere{radius: 16.5,  position: DVec3::new( 27.0,16.5,47.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.999), reflection: ReflectionType::SPECULAR},//Mirror
         Sphere{radius: 16.5,  position: DVec3::new( 73.0,16.5,78.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.999), reflection: ReflectionType::REFRACTIVE},//Glass
-        Sphere{radius: 1.0,   position: DVec3::new( 17.0,60.0,20.0), emission: DVec3::new(36.0, 0.0, 0.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Left Light
-        Sphere{radius: 8.0,  position: DVec3::new( 17.0,60.0,20.0), emission: DVec3::new(0.0, 0.0, 0.0), color: DVec3::new(0.999,0.999,0.999      ), reflection: ReflectionType::REFRACTIVE},//Left Light Inner Glass
-        Sphere{radius: 14.0,  position: DVec3::new( 17.0,60.0,20.0), emission: DVec3::new(0.0, 0.0, 0.0), color: DVec3::new(0.999,0.999,0.999      ), reflection: ReflectionType::REFRACTIVE},//Left Light Outer Glass
-        Sphere{radius: 2.0,   position: DVec3::new( 77.0,62.0,20.0), emission: DVec3::new(24.0, 24.0, 24.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Right Light
-        Sphere{radius: 10.0,  position: DVec3::new( 67.0,62.0,40.0), emission: DVec3::new(0.0, 0.0, 0.0), color: DVec3::new(0.999,0.999,0.999      ), reflection: ReflectionType::DIFFUSE},//Right Light Diffuse
+        Sphere{radius: 1.0,   position: DVec3::new( 17.0,60.0,20.0      ), emission: DVec3::new(36.0, 36.0, 36.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Left Light
+        Sphere{radius: 8.0,   position: DVec3::new( 17.0,60.0,20.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.0,0.999  ), reflection: ReflectionType::REFRACTIVE},//Left Light Inner Glass
+        Sphere{radius: 16.0,  position: DVec3::new( 17.0,60.0,20.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.0  ), reflection: ReflectionType::REFRACTIVE},//Left Light Outer Glass
+        Sphere{radius: 2.0,   position: DVec3::new( 77.0,62.0,20.0      ), emission: DVec3::new(24.0, 24.0, 24.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Right Light
+        Sphere{radius: 10.0,  position: DVec3::new( 67.0,62.0,40.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.999), reflection: ReflectionType::DIFFUSE},//Right Light Diffuse
+        Sphere{radius: 6.0,  position: DVec3::new( 90.0,62.0,15.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.999), reflection: ReflectionType::SPECULAR},//Right Light Diffuse
     ];
 
 pub fn clamp(x: f64) -> f64 {
@@ -156,8 +158,6 @@ pub fn radiance(ray: &Ray, depth: i32) -> DVec3 {
             ReflectionType::SPECULAR => {
                 ray.origin = x;
                 ray.direction = ray.direction - n * 2.0 * n.dot(ray.direction);
-
-
                 continue;
             },
             ReflectionType::REFRACTIVE => {
@@ -204,22 +204,24 @@ pub fn radiance(ray: &Ray, depth: i32) -> DVec3 {
 }
 
 pub fn run() -> bool {
-    let width = 512;
-    let height = 384;
-    let colors = 3;
-    let samples = 50;
-    let sampling_scale = 1.0 / samples as f64;
+    let width: i64 = 512;
+    let height: i64 = 384;
+    let samples: i32 = 1000;
+    let sampling_scale: f64 = 1.0 / samples as f64;
 
 
     let camera: Ray = Ray::new(DVec3::new(50.0, 52.0, 295.6), DVec3::new(0.0, -0.042612, -1.0).normalized());
     let cx: DVec3 = DVec3::new((width as f64) * 0.5135 / (height as f64), 0.0, 0.0);
     let cy: DVec3 = cx.cross(camera.direction).normalized() * 0.5135;
 
-    let mut image_buffer: Vec<f64> = vec![0.0; (width * height * colors) as usize];
+    // let mut image_buffer: Vec<f64> = vec![0.0; (width * height * colors) as usize];
 
-    for row_index in 0..height {
-        for column_index in 0..width {
-            let output_index: usize = (height - row_index - 1) * colors * width + column_index * colors; 
+    let total_pixels = height * width;
+    let image_buffer: Vec<DVec3> = 
+        (0..total_pixels).into_par_iter().map(|pixel_index:i64| {
+            let mut output_color: DVec3 = DVec3::zero();
+            let column_index = pixel_index % width;
+            let row_index = height - pixel_index / width - 1;
             for sy in 0..2 {
                 for sx in 0..2 {
                     let mut color: DVec3 = DVec3::zero();
@@ -237,21 +239,17 @@ pub fn run() -> bool {
                         color += contribution * sampling_scale;
                     }
 
-                    // println!("Color sample {:?}", color);
-                    // println!("x clamped {}", clamp(color.x) * 0.25);
-                    image_buffer[output_index + 0] += clamp(color.x) * 0.25;
-                    image_buffer[output_index + 1] += clamp(color.y) * 0.25;
-                    image_buffer[output_index + 2] += clamp(color.z) * 0.25;
-
+                    output_color.x += clamp(color.x) * 0.25;
+                    output_color.y += clamp(color.y) * 0.25;
+                    output_color.z += clamp(color.z) * 0.25;
                 }
             }
+            output_color
+        
+        }).collect();
 
-        }
-    }
-
-    let window_buffer: Vec<u32> = image_buffer
-        .chunks(3)
-        .map(|v| ((to_int(v[0]) as u32) << 16) | ((to_int(v[1]) as u32) << 8) | to_int(v[2]) as u32)
+    let window_buffer: Vec<u32> = image_buffer.into_par_iter()
+        .map(|v| ((to_int(v.x) as u32) << 16) | ((to_int(v.y) as u32) << 8) | to_int(v.z) as u32)
         .collect();
 
     let mut window = Window::new(
