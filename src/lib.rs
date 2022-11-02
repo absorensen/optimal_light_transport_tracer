@@ -68,7 +68,11 @@ static SPHERES: &'static [Sphere] =
         Sphere{radius: 1e5,   position: DVec3::new( 50.0,-1e5+81.6,81.6 ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.75,0.75,0.75   ), reflection: ReflectionType::DIFFUSE},//Top
         Sphere{radius: 16.5,  position: DVec3::new( 27.0,16.5,47.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.999), reflection: ReflectionType::SPECULAR},//Mirror
         Sphere{radius: 16.5,  position: DVec3::new( 73.0,16.5,78.0      ), emission: DVec3::new(0.0, 0.0, 0.0   ), color: DVec3::new(0.999,0.999,0.999), reflection: ReflectionType::REFRACTIVE},//Glass
-        Sphere{radius: 600.0, position: DVec3::new( 50.0,681.6-0.27,81.6), emission: DVec3::new(12.0, 12.0, 12.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Light
+        Sphere{radius: 1.0,   position: DVec3::new( 17.0,60.0,20.0), emission: DVec3::new(36.0, 0.0, 0.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Left Light
+        Sphere{radius: 8.0,  position: DVec3::new( 17.0,60.0,20.0), emission: DVec3::new(0.0, 0.0, 0.0), color: DVec3::new(0.999,0.999,0.999      ), reflection: ReflectionType::REFRACTIVE},//Left Light Inner Glass
+        Sphere{radius: 14.0,  position: DVec3::new( 17.0,60.0,20.0), emission: DVec3::new(0.0, 0.0, 0.0), color: DVec3::new(0.999,0.999,0.999      ), reflection: ReflectionType::REFRACTIVE},//Left Light Outer Glass
+        Sphere{radius: 2.0,   position: DVec3::new( 77.0,62.0,20.0), emission: DVec3::new(24.0, 24.0, 24.0), color: DVec3::new(0.0,0.0,0.0      ), reflection: ReflectionType::DIFFUSE},//Right Light
+        Sphere{radius: 10.0,  position: DVec3::new( 67.0,62.0,40.0), emission: DVec3::new(0.0, 0.0, 0.0), color: DVec3::new(0.999,0.999,0.999      ), reflection: ReflectionType::DIFFUSE},//Right Light Diffuse
     ];
 
 pub fn clamp(x: f64) -> f64 {
@@ -203,7 +207,7 @@ pub fn run() -> bool {
     let width = 512;
     let height = 384;
     let colors = 3;
-    let samples = 20;
+    let samples = 50;
     let sampling_scale = 1.0 / samples as f64;
 
 
