@@ -206,8 +206,11 @@ pub fn radiance(ray: &Ray, depth: i32) -> DVec3 {
 pub fn run() -> bool {
     let width: i64 = 512;
     let height: i64 = 384;
-    let samples: i32 = 1000;
-    let sampling_scale: f64 = 1.0 / samples as f64;
+    let subpixels_count: i32 = 8;
+    let subpixels_offset: f64 = 1.0 / subpixels_count as f64;
+    let subpixels_scale: f64 = 1.0 / (subpixels_count * subpixels_count) as f64;
+    let subsamples_count: i32 = 2;
+    let subsampling_scale: f64 = 1.0 / subsamples_count as f64;
 
 
     let camera: Ray = Ray::new(DVec3::new(50.0, 52.0, 295.6), DVec3::new(0.0, -0.042612, -1.0).normalized());
@@ -222,26 +225,26 @@ pub fn run() -> bool {
             let mut output_color: DVec3 = DVec3::zero();
             let column_index = pixel_index % width;
             let row_index = height - pixel_index / width - 1;
-            for sy in 0..2 {
-                for sx in 0..2 {
+            for sy in 0..subpixels_count {
+                for sx in 0..subpixels_count {
                     let mut color: DVec3 = DVec3::zero();
-                    for _sample_index in 0..samples {
+                    for _sample_index in 0..subsamples_count {
                         let r1 = 2.0 * rand::thread_rng().gen::<f64>();
                         let dx = if r1 < 1.0 { r1.sqrt() - 1.0 } else { 1.0 - (2.0 - r1).sqrt() };
 
                         let r2 = 2.0 * rand::thread_rng().gen::<f64>();
                         let dy = if r2 < 1.0 { r2.sqrt() - 1.0 } else { 1.0 - (2.0 - r2).sqrt() };
 
-                        let d: DVec3 = cx * ( ( ( (sx as f64) + 0.5 + (dx as f64)) * 0.5 + (column_index as f64)) / (width as f64) - 0.5 ) +
-                                       cy * ( ( ( (sy as f64) + 0.5 + (dy as f64)) * 0.5 + (row_index as f64)) / (height as f64) - 0.5) + camera.direction; 
+                        let d: DVec3 = cx * ( ( ( (sx as f64) + 0.5 + (dx as f64)) * subpixels_offset + (column_index as f64)) / (width as f64) - 0.5 ) +
+                                       cy * ( ( ( (sy as f64) + 0.5 + (dy as f64)) * subpixels_offset + (row_index as f64)) / (height as f64) - 0.5) + camera.direction; 
                     
                         let contribution: DVec3 = radiance(&Ray::new(camera.origin+d*140.0, d.normalized()), 0); 
-                        color += contribution * sampling_scale;
+                        color += contribution * subsampling_scale;
                     }
 
-                    output_color.x += clamp(color.x) * 0.25;
-                    output_color.y += clamp(color.y) * 0.25;
-                    output_color.z += clamp(color.z) * 0.25;
+                    output_color.x += clamp(color.x) * subpixels_scale;
+                    output_color.y += clamp(color.y) * subpixels_scale;
+                    output_color.z += clamp(color.z) * subpixels_scale;
                 }
             }
             output_color
@@ -252,8 +255,9 @@ pub fn run() -> bool {
         .map(|v| ((to_int(v.x) as u32) << 16) | ((to_int(v.y) as u32) << 8) | to_int(v.z) as u32)
         .collect();
 
+    let window_name : String = format!("Optimal Light Transporter - {} samples per pixel - Press ESC to exit", subsamples_count * subpixels_count * subpixels_count);
     let mut window = Window::new(
-        "Optimal Light Transporter - Press ESC to exit",
+        window_name.as_str(),
         width as usize,
         height as usize,
         WindowOptions {
@@ -263,6 +267,7 @@ pub fn run() -> bool {
         },
     )
     .expect("Unable to open Window");
+
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         window.update_with_buffer(
