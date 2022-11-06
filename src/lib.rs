@@ -167,7 +167,7 @@ pub fn hit_refractive(ray: &mut Ray, n: &DVec3, nl: &DVec3, x: &DVec3, cf: &mut 
     }
 }
 
-pub fn radiance(ray: &Ray, max_depth: usize, monte_carlo_depth: usize) -> DVec3 {
+pub fn radiance_naive(ray: Ray, max_depth: usize, monte_carlo_depth: usize) -> DVec3 {
     let mut t: f64 = 0.0;
     let mut id: usize = 0;
     let mut depth: usize = 0;
@@ -180,10 +180,27 @@ pub fn radiance(ray: &Ray, max_depth: usize, monte_carlo_depth: usize) -> DVec3 
         if !intersect(&ray, &mut t, &mut id) { return l; };
 
         let hit_object: &Sphere = &SPHERES[id];
+        l += beta * hit_object.emission;
+
+
         let hit_point: DVec3 = ray.origin + ray.direction * t;
         let hit_normal: DVec3 = (hit_point - hit_object.position).normalized();
         let hit_normal_corrected: DVec3 = if hit_normal.dot(ray.direction) < 0.0 { hit_normal } else { -1.0 * hit_normal };
-        l += beta * hit_object.emission;
+
+        // Get new direction
+        match hit_object.reflection {
+            ReflectionType::DIFFUSE => {
+                hit_diffuse(&mut ray, &hit_normal_corrected, &hit_point);
+            },
+            ReflectionType::SPECULAR => {
+                hit_specular(&mut ray, &hit_normal_corrected, &hit_point);
+            },
+            ReflectionType::REFRACTIVE => {
+                hit_refractive(&mut ray, &hit_normal, &hit_normal_corrected, &hit_point, &mut beta);
+            },
+        }
+
+        beta *= hit_object.color;
 
         depth += 1;
         if monte_carlo_depth < depth {
@@ -196,24 +213,6 @@ pub fn radiance(ray: &Ray, max_depth: usize, monte_carlo_depth: usize) -> DVec3 
         } else if max_depth <= depth {
             return l;
         }
-
-        beta = beta * hit_object.color;
-
-        match hit_object.reflection {
-            ReflectionType::DIFFUSE => {
-                hit_diffuse(&mut ray, &hit_normal_corrected, &hit_point);
-                continue;
-            },
-            ReflectionType::SPECULAR => {
-                hit_specular(&mut ray, &hit_normal, &hit_point);
-                continue;
-            },
-            ReflectionType::REFRACTIVE => {
-                hit_refractive(&mut ray, &hit_normal, &hit_normal_corrected, &hit_point, &mut beta);
-                continue;
-            },
-        }
-
     }
 
     l
@@ -257,7 +256,8 @@ pub fn run() -> bool {
                 let d: DVec3 = cx * ( ( ( (sx as f64) + 0.5 + (dx as f64)) * subpixels_offset + (column_index as f64)) / (width as f64) - 0.5 ) +
                                 cy * ( ( ( (sy as f64) + 0.5 + (dy as f64)) * subpixels_offset + (row_index as f64)) / (height as f64) - 0.5) + camera.direction; 
             
-                let contribution: DVec3 = radiance(&Ray::new(camera.origin+d*140.0, d.normalized()), max_depth, monte_carlo_depth); 
+                let camera_ray: Ray = Ray::new(camera.origin+d*140.0, d.normalized());
+                let contribution: DVec3 = radiance_naive(camera_ray, max_depth, monte_carlo_depth); 
                 contribution * sample_scale
             }).sum();
 
