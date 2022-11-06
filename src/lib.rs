@@ -90,21 +90,17 @@ pub fn to_int(x: f64) -> i32 {
 }
 
 pub fn intersect(ray: &Ray, t: &mut f64, id: &mut usize) -> bool {
-    let n: f64 = (SPHERES.len() / size_of::<Sphere>()) as f64;
     let spheres_count = SPHERES.len();
     // Maybe just do this in the loop
-    let mut d: f64 = 0.0;
     let inf: f64 = 1e20;
     *t = 1e20;
 
-    for index in (0..(spheres_count as usize)).rev() {
-        d = SPHERES[index].intersect(ray);
+    for index in 0..spheres_count {
+        let d = SPHERES[index].intersect(ray);
         if d != 0.0 && d < *t {
             *t = d;
             *id = index;
-        } else {
         }
-
     }
 
     *t < inf
@@ -223,7 +219,7 @@ pub fn run() -> bool {
     let height: usize = 384;
     let max_depth: usize = 50;
     let monte_carlo_depth: usize = 6;
-    let subpixels_count: usize = 16;
+    let subpixels_count: usize = 8;
     let subpixels_offset: f64 = 1.0 / subpixels_count as f64;
     let subsamples_count: usize = 4;
     let sample_scale: f64 = 1.0 / (subpixels_count * subpixels_count * subsamples_count) as f64;
