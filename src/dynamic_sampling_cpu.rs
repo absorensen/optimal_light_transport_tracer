@@ -13,7 +13,7 @@ pub fn radiance_dynamic_sampling(ray: Ray, max_depth: usize, monte_carlo_depth: 
     let mut ray_queue: Vec<(usize, DVec3, Ray)> = Vec::<(usize, DVec3, Ray)>::new();
     ray_queue.push((0, DVec3::broadcast(1.0), ray.clone()));
 
-    let extra_diffuse_samples_count: i32 = 1;
+    let extra_diffuse_samples_count: i32 = 2;
     let extra_diffuse_bounce_max_depth: usize = 2;
     let light_sample_count: i32 = 1;
 
@@ -71,28 +71,34 @@ pub fn radiance_dynamic_sampling(ray: Ray, max_depth: usize, monte_carlo_depth: 
                 attenuation *= 1.0 / p;
             } 
 
-            // Generate light sampling rays
-            for _ in 0..light_sample_count {
-                let light_index: usize = rand::thread_rng().gen_range(0..LIGHTS.len()) as usize;
-                let light: &Light = &LIGHTS[light_index];
-                let on_light: DVec3 = random_on_sphere(light.radius, &light.position);
-                let mut to_light: DVec3 = on_light - hit_position;
-                let light_distance_squared: f64 = to_light.mag_sq();
-                to_light.normalize();
-                let new_ray: Ray = Ray::new(hit_position, to_light);
-                if intersect(&new_ray, &mut t, &mut id) { 
-                    if id == light.spheres_index {
-                        let cos_theta_max: f64 = (1.0 - light.radius * light.radius / light_distance_squared).sqrt();
-                        let solid_angle: f64 = 2.0 * PI * (1.0 - cos_theta_max);
-                        let light_pdf: f64 = 1.0 / solid_angle;
-                        if light_pdf < 0.0000001 { continue; }
-                        let contribution: DVec3 = SPHERES[light.spheres_index].emission * attenuation / light_pdf;
-                        if contribution.x.is_nan() || contribution.y.is_nan() || contribution.z.is_nan() { continue; }
-                        radiance += contribution;
-                        total_samples += 1;
-                    }
+            match hit_object.reflection {
+                ReflectionType::SPECULAR => {},
+                ReflectionType::REFRACTIVE => {},
+                _ => {
+                    // Generate light sampling rays
+                    for _ in 0..light_sample_count {
+                        let light_index: usize = rand::thread_rng().gen_range(0..LIGHTS.len()) as usize;
+                        let light: &Light = &LIGHTS[light_index];
+                        let on_light: DVec3 = random_on_sphere(light.radius, &light.position);
+                        let mut to_light: DVec3 = on_light - hit_position;
+                        let light_distance_squared: f64 = to_light.mag_sq();
+                        to_light.normalize();
+                        let new_ray: Ray = Ray::new(hit_position, to_light);
+                        if intersect(&new_ray, &mut t, &mut id) { 
+                            if id == light.spheres_index {
+                                let cos_theta_max: f64 = (1.0 - light.radius * light.radius / light_distance_squared).sqrt();
+                                let solid_angle: f64 = 2.0 * PI * (1.0 - cos_theta_max);
+                                let light_pdf: f64 = 1.0 / solid_angle;
+                                if light_pdf < 0.0000001 { continue; }
+                                let contribution: DVec3 = 0.5 * SPHERES[light.spheres_index].emission * attenuation / light_pdf;
+                                if contribution.x.is_nan() || contribution.y.is_nan() || contribution.z.is_nan() { continue; }
+                                radiance += contribution;
+                                total_samples += 1;
+                            }
 
-                };
+                        };
+                    }
+                }
             }
 
             if max_depth <= depth {

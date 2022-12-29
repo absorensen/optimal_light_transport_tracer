@@ -128,7 +128,7 @@ impl RenderContext {
         let height: usize = 384;
         let max_depth: usize = 50;
         let monte_carlo_depth: usize = 6;
-        let subpixels_count: usize = 4;
+        let subpixels_count: usize = 3;
         let subpixels_offset: f64 = 1.0 / subpixels_count as f64;
         let subsamples_count: usize = 5;
         let sample_scale: f64 = 1.0 / (subpixels_count * subpixels_count * subsamples_count) as f64;
@@ -139,7 +139,7 @@ impl RenderContext {
 
         let total_pixels: usize = height * width;
 
-        let algorithm: LightTransportAlgorithm = LightTransportAlgorithm::MIXTURE_PDF;
+        let algorithm: LightTransportAlgorithm = LightTransportAlgorithm::DYNAMIC_SAMPLING;
 
         RenderContext { width, height, max_depth, monte_carlo_depth, subpixels_count, subpixels_offset, subsamples_count, sample_scale, camera, cx, cy, total_pixels, algorithm }
     }
