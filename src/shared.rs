@@ -126,11 +126,11 @@ impl RenderContext {
     pub fn default() -> Self {
         let width: usize = 512;
         let height: usize = 384;
-        let max_depth: usize = 50;
+        let max_depth: usize = 10;
         let monte_carlo_depth: usize = 6;
-        let subpixels_count: usize = 3;
+        let subpixels_count: usize = 8;
         let subpixels_offset: f64 = 1.0 / subpixels_count as f64;
-        let subsamples_count: usize = 5;
+        let subsamples_count: usize = 4;
         let sample_scale: f64 = 1.0 / (subpixels_count * subpixels_count * subsamples_count) as f64;
     
         let camera: Ray = Ray::new(DVec3::new(50.0, 52.0, 295.6), DVec3::new(0.0, -0.042612, -1.0).normalized());
@@ -139,7 +139,7 @@ impl RenderContext {
 
         let total_pixels: usize = height * width;
 
-        let algorithm: LightTransportAlgorithm = LightTransportAlgorithm::DYNAMIC_SAMPLING;
+        let algorithm: LightTransportAlgorithm = LightTransportAlgorithm::BIDIRECTIONAL;
 
         RenderContext { width, height, max_depth, monte_carlo_depth, subpixels_count, subpixels_offset, subsamples_count, sample_scale, camera, cx, cy, total_pixels, algorithm }
     }
@@ -186,7 +186,7 @@ pub static LIGHTS: &'static [Light] =
 
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
     pub origin: DVec3,
     pub direction: DVec3,
@@ -195,6 +195,10 @@ pub struct Ray {
 impl Ray {
     pub fn new(origin: DVec3, direction: DVec3) -> Self {
         Ray{origin, direction}
+    }
+
+    pub fn default() -> Self {
+        Ray{origin: DVec3::zero(), direction: DVec3::zero() }
     }
 }
 

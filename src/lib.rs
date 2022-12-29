@@ -9,6 +9,7 @@ mod cpu_tracer;
 mod naive_cpu;
 mod mixture_pdf_cpu;
 mod dynamic_sampling_cpu;
+mod bidirectional_cpu;
 mod gpu_tracer;
 mod shared;
 

@@ -4,7 +4,7 @@ use rand::Rng;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use ultraviolet::DVec3;
 
-use crate::{shared::{RenderContext, Ray, SPHERES, clamp, LightTransportAlgorithm}, naive_cpu::radiance_naive, mixture_pdf_cpu::radiance_mixture_pdf, dynamic_sampling_cpu::radiance_dynamic_sampling};
+use crate::{shared::{RenderContext, Ray, SPHERES, clamp, LightTransportAlgorithm}, naive_cpu::radiance_naive, mixture_pdf_cpu::radiance_mixture_pdf, dynamic_sampling_cpu::radiance_dynamic_sampling, bidirectional_cpu::radiance_bidirectional};
 
 #[inline(always)]
 pub fn intersect(ray: &Ray, t: &mut f64, id: &mut usize) -> bool {
@@ -127,6 +127,7 @@ pub fn naive_path_trace_cpu(context: RenderContext) -> Vec<DVec3> {
                 LightTransportAlgorithm::NAIVE => radiance_naive(camera_ray, context.max_depth, context.monte_carlo_depth),
                 LightTransportAlgorithm::MIXTURE_PDF => radiance_mixture_pdf(camera_ray, context.max_depth, context.monte_carlo_depth),
                 LightTransportAlgorithm::DYNAMIC_SAMPLING => radiance_dynamic_sampling(camera_ray, context.max_depth, context.monte_carlo_depth),
+                LightTransportAlgorithm::BIDIRECTIONAL => radiance_bidirectional(camera_ray, context.max_depth, context.monte_carlo_depth),
                 _ => radiance_naive(camera_ray, context.max_depth, context.monte_carlo_depth),
             }; 
             contribution * context.sample_scale
